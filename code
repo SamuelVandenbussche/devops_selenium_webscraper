@@ -1,0 +1,162 @@
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using System.Globalization;
+using System.Text;
+using System.IO;
+using System;
+using Newtonsoft.Json;
+using System.Threading;
+
+namespace WebScraper
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Console.WriteLine("druk op 1 voor youtube, op 2 voor een job en op 3 voor fanfictie");
+            var keuze = Console.ReadLine();
+            if (keuze == "1")
+            {
+                StringBuilder csv = new StringBuilder();
+                string seperatie = ",";
+                string[] hoofd = { "link", "titel", "weergaven", "uploader" };
+                csv.AppendLine(string.Join(seperatie, hoofd));
+                Console.WriteLine("geef een zoekterm:");
+                string zoeken = Console.ReadLine();
+                IWebDriver driver = new ChromeDriver();
+                driver.Navigate().GoToUrl("https://www.youtube.com/results?search_query=" + zoeken + "&sp=CAI%253D");
+                Thread.Sleep(500);
+                var accepteer = driver.FindElement(By.XPath("//*[@id=\"content\"]/div[2]/div[6]/div[1]/ytd-button-renderer[2]/yt-button-shape/button/yt-touch-feedback-shape/div/div[2]"));
+                accepteer.Click();
+                Thread.Sleep(500);
+                var link = driver.FindElements(By.XPath("//*[@id=\"video-title\"]"));
+                var titel = driver.FindElements(By.XPath("//*[@id=\"video-title\"]"));
+                var weergaven = driver.FindElements(By.XPath("//*[@id=\"metadata-line\"]/span[1]"));
+                var uploader = driver.FindElement(By.XPath("/html/body/ytd-app/div[1]/ytd-page-manager/ytd-search/div[1]/ytd-two-column-search-results-renderer/div[2]/div/ytd-section-list-renderer/div[2]/ytd-item-section-renderer/div[3]/ytd-video-renderer[1]/div[1]/div/div[2]/ytd-channel-name/div/div/yt-formatted-string/a"));
+                List<Video> videoList = new List<Video> { new Video { Link = link.ElementAt(0).GetAttribute("href"), Titel = titel.ElementAt(0).Text, Weergaven = weergaven.ElementAt(0).Text, Uploader = uploader.Text } };
+                for (var i = 0; i < 5; i++)
+                {
+                    string[] line = { link.ElementAt(i).GetAttribute("href"), titel.ElementAt(i).Text, weergaven.ElementAt(i).Text, uploader.Text };
+                    Console.Write(link.ElementAt(i).GetAttribute("href") + " " + titel.ElementAt(i).Text + " " + weergaven.ElementAt(i).Text + " " + uploader.Text + "\n");
+                    csv.AppendLine(string.Join(seperatie, line));
+                    string upl = "/html/body/ytd-app/div[1]/ytd-page-manager/ytd-search/div[1]/ytd-two-column-search-results-renderer/div[2]/div/ytd-section-list-renderer/div[2]/ytd-item-section-renderer/div[3]/ytd-video-renderer[" + (i + 2) + "]/div[1]/div/div[2]/ytd-channel-name/div/div/yt-formatted-string/a";
+                    uploader = driver.FindElement(By.XPath(upl));
+                    if (i != 4)
+                        {
+                           videoList.Add(new Video { Link = link.ElementAt(i + 1).GetAttribute("href"), Titel = titel.ElementAt(i + 1).Text, Weergaven = weergaven.ElementAt(i + 1).Text, Uploader = uploader.Text });
+                        }
+                        
+                }
+                string json = JsonConvert.SerializeObject(videoList);
+                File.WriteAllText(@"C:\csv_dev\file.json", json);
+                File.WriteAllText(@"C:\csv_dev\file.csv", csv.ToString());
+                driver.Close();
+            }
+            else if (keuze == "2")
+            {
+                StringBuilder csv = new StringBuilder();
+                string seperatie = ",";
+                string[] hoofd = { "link", "titel", "bedrijf", "keywords", "locatie" };
+                csv.AppendLine(string.Join(seperatie, hoofd));
+                Console.WriteLine("geef een zoekterm:");
+                string zoeken = Console.ReadLine();
+                IWebDriver driver = new ChromeDriver();
+                driver.Navigate().GoToUrl("https://www.ictjob.be/nl/it-vacatures-zoeken?keywords=" + zoeken);
+                Thread.Sleep(4000);
+                driver.FindElement(By.XPath("//*[@id=\"sort-by-date\"]")).Click();
+                Thread.Sleep(10000);
+                var link = driver.FindElements(By.ClassName("search-item-link"));
+                var titel = driver.FindElements(By.ClassName("job-title"));
+                var bedrijf = driver.FindElements(By.ClassName("job-company"));
+                var keywords = driver.FindElements(By.ClassName("job-keywords"));
+                var locatie = driver.FindElements(By.ClassName("job-location"));
+                List<Vacature> vacatures = new List<Vacature> { new Vacature { Link = link.ElementAt(0).GetAttribute("href"), Titel = titel.ElementAt(0).Text, Bedrijf =  bedrijf.ElementAt(0).Text, Keywords = keywords.ElementAt(0).Text, Locatie = locatie.ElementAt(0).Text } };
+                for (var i = 0; i < 5; i++)
+                {
+                    try
+                    {
+                        string[] line = { link.ElementAt(i).GetAttribute("href"), titel.ElementAt(i).Text, bedrijf.ElementAt(i).Text, keywords.ElementAt(i).Text, locatie.ElementAt(i).Text };
+                        Console.WriteLine(link.ElementAt(i).GetAttribute("href") + " " + titel.ElementAt(i).Text + " " + bedrijf.ElementAt(i).Text + " " + keywords.ElementAt(i).Text + " " + locatie.ElementAt(i).Text);
+                        csv.AppendLine(string.Join(seperatie, line));
+                        if (i != 4) { vacatures.Add(new Vacature { Link = link.ElementAt(i + 1).GetAttribute("href"), Titel = titel.ElementAt(i + 1).Text, Bedrijf = bedrijf.ElementAt(i + 1).Text, Keywords = keywords.ElementAt(i + 1).Text, Locatie = locatie.ElementAt(i + 1).Text }); }
+                    }
+                    catch { }
+
+                }
+                string json = JsonConvert.SerializeObject(vacatures);
+                File.WriteAllText(@"C:\csv_dev\file2.csv", csv.ToString());
+                File.WriteAllText(@"C:\csv_dev\file2.json", json);
+                driver.Close();
+
+            }
+            else
+            {
+                StringBuilder csv = new StringBuilder();
+                string seperatie = ",";
+                string[] hoofd = { "titel", "auteur", "upload", "taal" };
+                csv.AppendLine(string.Join(seperatie, hoofd));
+                Console.WriteLine("geef een genre:");
+                string zoeken = Console.ReadLine();
+                IWebDriver driver = new ChromeDriver();
+                driver.Navigate().GoToUrl("https://archiveofourown.org/tags/" + zoeken + "/works");
+                Thread.Sleep(3000);
+                driver.FindElement(By.XPath("//*[@id=\"tos_agree\"]")).Click();
+                driver.FindElement(By.XPath("//*[@id=\"accept_tos\"]")).Click();
+                Thread.Sleep(500);
+                var titel = driver.FindElement(By.XPath("/html/body/div[1]/div[2]/div/ol[2]/li[1]/div/h4/a[1]"));
+                var auteur = driver.FindElement(By.XPath("/html/body/div[1]/div[2]/div/ol[2]/li[1]/div/h4/a[2]"));
+                var upload = driver.FindElement(By.XPath("/html/body/div[1]/div[2]/div/ol[2]/li[1]/div/p"));
+                var taal = driver.FindElement(By.XPath("/html/body/div[1]/div[2]/div/ol[2]/li[1]/dl/dd[1]"));
+                List<Verhaal> verhalen = new List<Verhaal> { new Verhaal { Titel = titel.Text, Auteur = auteur.Text, Upload = upload.Text, Taal = taal.Text } };
+                string[] line = { titel.Text, auteur.Text, upload.Text, taal.Text };
+                csv.AppendLine(string.Join(seperatie, line));
+
+                Console.WriteLine(titel.Text + " " + auteur.Text + " " + upload.Text + " " + taal.Text);
+                for (var i = 2; i < 6; i++)
+                {
+                    String xpath = "/html/body/div[1]/div[2]/div/ol[2]/li["+i+"]/div/h4/a[1]";
+                    String xpath2 = "/html/body/div[1]/div[2]/div/ol[2]/li["+i+"]/div/h4/a[2]";
+                    String xpath3 = "/html/body/div[1]/div[2]/div/ol[2]/li["+i+"]/div/p";
+                    String xpath4 = "/html/body/div[1]/div[2]/div/ol[2]/li["+i+"]/dl/dd[1]";
+                    titel = driver.FindElement(By.XPath(xpath));
+                    auteur = driver.FindElement(By.XPath(xpath2));
+                    upload = driver.FindElement(By.XPath(xpath3));
+                    taal = driver.FindElement(By.XPath(xpath4));
+                    verhalen.Add(new Verhaal { Titel = titel.Text, Auteur = auteur.Text, Upload = upload.Text, Taal = taal.Text });
+                    string[] line1 = { titel.Text, auteur.Text, upload.Text, taal.Text };
+                    csv.AppendLine(string.Join(seperatie, line1));
+
+                    Console.WriteLine(titel.Text + " " + auteur.Text + " " + upload.Text + " " + taal.Text);
+                }
+                string json = JsonConvert.SerializeObject(verhalen);
+                File.WriteAllText(@"C:\csv_dev\file3.csv", csv.ToString());
+                File.WriteAllText(@"C:\csv_dev\file3.json", json);
+                driver.Close();
+            }
+        }
+                public class Verhaal
+        {
+            public string Titel { get; set; }
+            public string Auteur { get; set; }
+            public string Upload { get; set; }
+            public string Taal { get; set; }
+        }
+        public class Video
+        {
+            public string Link { get; set; }
+            public string Titel { get; set; }
+            public string Weergaven { get; set; }
+            public string Uploader { get; set; }
+        }
+        public class Vacature
+        {
+            public string Link { get; set; }
+            public string Titel { get; set; }
+            public string Bedrijf { get; set; }
+            public string  Keywords { get; set; }
+            public string Locatie { get; set; }
+        }
+    }
+}
+
+
